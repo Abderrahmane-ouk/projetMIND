@@ -181,20 +181,20 @@ def normalize(hands, handedness):
             # We compute the normal vector of the palm of the hand
             A, B, C = hands[i][0], hands[i][5], hands[i][17]
             normal_vector = np.cross((B - A), (C - A))
-            target_vector = np.array([0, 0, -1])
+            normal_vector /= np.linalg.norm(normal_vector)
+            target_vector = np.array([0., 0., -1.])
             # We compute the cos(rotation angle) and the rotation axis
-            cos_rotation_angle = np.arccos(normal_vector @ target_vector)
+            cos_rotation_angle = normal_vector @ target_vector
             rotation_axis = np.cross(normal_vector, target_vector)
             # We compute the skew-symmetric cross-product matrix
-            v = np.array([[0, -rotation_axis[2], rotation_axis[1]],
-                          [rotation_axis[2], 0, -rotation_axis[0]],
-                          [-rotation_axis[1], rotation_axis[0], 0]
-                        ])
+            skew_symmetric_matrix = np.array([[0, -rotation_axis[2], rotation_axis[1]],
+                                              [rotation_axis[2], 0, -rotation_axis[0]],
+                                              [-rotation_axis[1], rotation_axis[0], 0]
+            ])
             # We compute the rotation matrix
-            rotation_matrix = np.eye(3) + v + v @ v * (1 / (1 + cos_rotation_angle))
-            print(rotation_matrix)
+            rotation_matrix = np.eye(3) + skew_symmetric_matrix + skew_symmetric_matrix @ skew_symmetric_matrix / (1 + cos_rotation_angle)
             # We apply the rotation matrix on all our points
-            hands[i] = hands[i] @ rotation_matrix
+            hands[i] = hands[i] @ rotation_matrix.T
     return hands
 
 
@@ -209,7 +209,7 @@ def from_camera_normalized():
         rgb = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         res = detector.detect(rgb)
         h, w, _ = img.shape
-        hands = np.array([[[point.x*w, point.y*h, point.z] for point in hand] for hand in res.hand_landmarks])
+        hands = np.array([[[point.x*w, point.y*h, point.z*np.mean([w, h])] for point in hand] for hand in res.hand_landmarks])
         handedness = [hand[0].index for hand in res.handedness]
         # We normalize it
         hands = normalize(hands, handedness)
