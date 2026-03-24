@@ -1,5 +1,5 @@
 # python -m venv my-venv
-# my-venv/Scripts/pip install mediapipe opencv-python matplotlib
+# my-venv/Scripts/pip install mediapipe opencv-python matplotlib pandas
 # my-venv/Scripts/python main.py
 # Download the file from https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
 
@@ -21,7 +21,9 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import matplotlib.pyplot as plt
+import pandas as pd
 import copy
+
 
 
 # Takes an image and the hand landmarks (a numpy array of size nb_hands * 21 * 3), and draws the landmarks
@@ -86,6 +88,22 @@ def from_image(filename):
     h, w, _ = img.shape
     hands = np.array([[[point.x*w, point.y*h, point.z] for point in hand] for hand in res.hand_landmarks]) 
 
+    draw_hands(img, hands)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+# Takes a matrix
+def from_matrix(X):
+    base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
+    options = vision.HandLandmarkerOptions(base_options=base_options, num_hands=2)
+    detector = vision.HandLandmarker.create_from_options(options)
+    print(type(X[0, 0, 0].astype(np.uint8)))
+    # We repeat the last axis three times so that it becomes RGB
+    img = X.repeat(3, -1).astype(np.uint8)
+    rgb = mp.Image(image_format=mp.ImageFormat.SRGB, data=img)
+    res = detector.detect(rgb)
+    h, w, _ = img.shape
+    hands = np.array([[[point.x*w, point.y*h, point.z] for point in hand] for hand in res.hand_landmarks]) 
     draw_hands(img, hands)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -272,9 +290,18 @@ def from_camera_with_3D():
 
 
 
+train, test = pd.read_csv('sign_mnist_train.csv').to_numpy(), pd.read_csv('sign_mnist_test.csv').to_numpy()
+x_train, y_train = train[:, 1:], train[:, 0]
+x_test, y_test = test[:, 1:], test[:, 0]
+x_train = x_train.reshape(-1, 28, 28, 1)
+x_test = x_test.reshape(-1, 28, 28, 1)
+#for x in x_train[:10]:
+#    from_matrix(x)
+#from_image("mnist_example.png")
+
 #from_image("image.png")
 #from_camera()
-from_camera_normalized()
+#from_camera_normalized()
 #from_camera_with_3D()
 
 """
