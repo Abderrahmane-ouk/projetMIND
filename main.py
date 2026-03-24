@@ -1,5 +1,5 @@
 # python -m venv my-venv
-# my-venv/Scripts/pip install mediapipe opencv-python matplotlib pandas
+# my-venv/Scripts/pip install mediapipe opencv-python matplotlib pandas torch
 # my-venv/Scripts/python main.py
 # Download the file from https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
 
@@ -289,12 +289,101 @@ def from_camera_with_3D():
     cv2.destroyAllWindows()
 
 
+from torch.utils.data import DataLoader, TensorDataset
+import torch
+import torch.nn.functional as F
+from torch import nn
+import torch.optim as optim
 
-train, test = pd.read_csv('sign_mnist_train.csv').to_numpy(), pd.read_csv('sign_mnist_test.csv').to_numpy()
-x_train, y_train = train[:, 1:], train[:, 0]
-x_test, y_test = test[:, 1:], test[:, 0]
-x_train = x_train.reshape(-1, 28, 28, 1)
-x_test = x_test.reshape(-1, 28, 28, 1)
+
+train, test = torch.tensor(pd.read_csv('sign_mnist_train.csv').values), torch.tensor(pd.read_csv('sign_mnist_test.csv').values)
+x_train, y_train = train[:, 1:]/255, train[:, 0]
+x_test, y_test = test[:, 1:]/255, test[:, 0]
+x_train = x_train.view(-1, 1, 28, 28)
+x_test = x_test.view(-1, 1, 28, 28)
+y_train[y_train > 9] -= 1
+y_test[y_test > 9] -= 1
+#y_train = np.array([[int(i==y) for i in range(24)] for y in y_train])
+#y_test = np.array([[int(i==y) for i in range(24)] for y in y_test])
+train_dataset = TensorDataset(x_train, y_train)
+test_dataset = TensorDataset(x_test, y_test)
+batch_size = 32
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+
+class CNN(nn.Module):
+    def __init__(self, size_hidden_layer=200):
+        super().__init__()
+        self.conv_layers = [nn.Conv2d(1, 5, 3), nn.Conv2d(5, 10, 3), nn.Conv2d(10, 20, 3)] # in_channels, out_channels, kernel_size (stride=1, padding=0)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.fc1 = nn.Linear(20, size_hidden_layer)
+        self.fc2 = nn.Linear(size_hidden_layer, 24)
+
+    def forward(self, x):
+        for i in range(len(self.conv_layers)):
+            test = self.conv_layers[i](x)
+            x = self.pool(F.relu(self.conv_layers[i](x)))
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)
+
+cnn = CNN()
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(cnn.parameters(), lr=0.001)
+
+losses_train, accuracies_train, losses_test, accuracies_test = [], [], [], []
+for epoch in range(10):
+    print(f"{epoch=}")
+    loss_train, accuracy_train = 0, 0
+    for batch_train_x, batch_train_y in train_dataloader:
+        # Train
+        cnn.train()
+        optimizer.zero_grad()
+        # Calcul de la loss
+        outputs = cnn(batch_train_x)
+        loss = criterion(outputs, batch_train_y)
+        loss_train += loss.item()
+        # Calcul de l'accuracy
+        _, predicted = torch.max(outputs, 1)
+        real = batch_train_y
+        accuracy_train += (predicted == real).sum().item()
+        # Descente de gradient
+        loss.backward()
+        optimizer.step()
+    accuracies_train.append(accuracy_train/len(x_train))
+    losses_train.append(loss_train/len(x_train))
+
+    loss_test, accuracy_test = 0, 0
+    for batch_test_x, batch_test_y in test_dataloader:
+        # Test
+        cnn.eval()
+        outputs = cnn(batch_test_x)
+        # Calcul de la loss
+        loss = criterion(outputs, batch_test_y)
+        loss_test += loss.item()
+        # Calcul de l'accuracy
+        _, predicted = torch.max(outputs, 1)
+        real = batch_test_y
+        accuracy_test += (predicted == real).sum().item()
+    accuracies_test.append(accuracy_test/len(x_test))
+    losses_test.append(loss_test/len(x_test))
+
+plt.plot(range(1, len(losses_train)+1), losses_train, label="train")
+plt.plot(range(1, len(losses_test)+1), losses_test, label="test")
+plt.xlabel('Epoch')
+plt.ylabel('Cross Entropy')
+plt.legend()
+plt.show()
+
+plt.plot(range(1, len(accuracies_train)+1), accuracies_train, label="train")
+plt.plot(range(1, len(accuracies_test)+1), accuracies_test, label="test")
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
+
+
 #for x in x_train[:10]:
 #    from_matrix(x)
 #from_image("mnist_example.png")
