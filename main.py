@@ -1,5 +1,5 @@
 # python -m venv my-venv
-# my-venv/Scripts/pip install mediapipe opencv-python matplotlib pandas torch
+# my-venv/Scripts/pip install mediapipe opencv-python matplotlib pandas torch tensorflow scikit-learn seaborn
 # my-venv/Scripts/python main.py
 # Download the file from https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
 
