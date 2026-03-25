@@ -67,3 +67,9 @@ Si on a un objet qui est orienté selon le vecteur n, et que l'on veut qu'il soi
 	https://math.stackexchange.com/questions/180418
 	La matrice de rotation est R = I + [v] + [v]² * (1 / 1 + c)
 
+
+March 25
+¨¨¨¨¨¨¨¨
+
+https://www.nature.com/articles/s41598-025-09643-2.pdf
+https://github.com/tarekhemdan/ASL
