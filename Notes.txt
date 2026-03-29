@@ -68,8 +68,27 @@ Si on a un objet qui est orienté selon le vecteur n, et que l'on veut qu'il soi
 	La matrice de rotation est R = I + [v] + [v]² * (1 / 1 + c)
 
 
+March 24
+¨¨¨¨¨¨¨¨
+https://www.kaggle.com/datasets/datamunge/sign-language-mnist
+
 March 25
 ¨¨¨¨¨¨¨¨
 
 https://www.nature.com/articles/s41598-025-09643-2.pdf
 https://github.com/tarekhemdan/ASL
+
+March 27
+¨¨¨¨¨¨¨¨
+
+ssh 21311806@ssh.ufr-info-p6.jussieu.fr
+ssh ppti-14-302-04
+scp C:\Users\OUKACHBI\Desktop\projetMIND\proposed_2.py 21311806@ssh.ufr-info-p6.jussieu.fr:~/Bureau/projetMIND/proposed_2.py
+curl -LsSf https://astral.sh/uv/install.sh | sh
+cd /Vrac
+uv venv groupe28
+source groupe28/bin/activate
+uv pip install … --no-cache
+/users/nfs/Vrac/groupe28/bin/python proposed_2.py
+
+
