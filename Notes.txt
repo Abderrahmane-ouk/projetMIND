@@ -92,3 +92,19 @@ uv pip install … --no-cache
 /users/nfs/Vrac/groupe28/bin/python proposed_2.py
 
 
+scp 21311806@ssh.ufr-info-p6.jussieu.fr:~/Bureau/projetMIND/proposed_2.py C:\Users\OUKACHBI\Desktop\projetMIND\proposed_2.py
+
+March 29
+¨¨¨¨¨¨¨¨
+
+Labelliser les 24 lettres de l'ASL en 15 labels :
+- Pour chaque doigt, il y a deux labels, l'angle et la forme
+- Pour le pouce, il y a en plus une variable booléenne indiquant s'il est opposé ou non.
+- Il y a aussi 4 variables en plus indiquant quels doigts touchent le pouce
+
+March 31
+¨¨¨¨¨¨¨¨
+
+Séparer en données de train, validation, et test, tirés aléatoirement, puis essayer le CNN dessus.
+
+

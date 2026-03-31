@@ -16,23 +16,32 @@ from sklearn.preprocessing import LabelBinarizer
 # Load data
 train_df = pd.read_csv(r'sign_mnist_train.csv')
 test_df = pd.read_csv(r'sign_mnist_test.csv')
-test = pd.read_csv(r'sign_mnist_test.csv')
-y = test['label']
+# blabla
+merged_df = pd.concat([train_df, test_df], ignore_index=True)
+train_df, test_df = train_test_split(merged_df, test_size=0.2, random_state=42)
+# On sépare le train en deux parties (train et validation)
+train_df, val_df = train_test_split(train_df, test_size=0.1, random_state=42) 
+y = test_df['label']
 y_train = train_df['label']
 y_test = test_df['label']
+y_val = val_df['label']
 del train_df['label']
 del test_df['label']
+del val_df['label']
 
 # Label binarization
 label_binarizer = LabelBinarizer()
 y_train = label_binarizer.fit_transform(y_train)
 y_test = label_binarizer.fit_transform(y_test)
-
+y_val = label_binarizer.fit_transform(y_val)
 # Normalize and reshape data
 x_train = train_df.values / 255
 x_test = test_df.values / 255
+x_val = val_df.values / 255
 x_train = x_train.reshape(-1, 28, 28, 1)
 x_test = x_test.reshape(-1, 28, 28, 1)
+x_val = x_val.reshape(-1, 28, 28, 1)
+
 
 # Visualize some samples
 f, ax = plt.subplots(2, 5)
@@ -121,11 +130,13 @@ model.summary()
 # Train the model
 history = model.fit(datagen.flow(x_train, y_train, batch_size=128),
                     epochs=20,
-                    validation_data=(x_test, y_test),
+                    validation_data=(x_val, y_val),
                     callbacks=[learning_rate_reduction])
 
 # Evaluate the model
 print("Accuracy of the model is - ", model.evaluate(x_test, y_test)[1] * 100, "%")
+
+
 
 # Plot training and validation accuracy and loss
 epochs = [i for i in range(20)]
@@ -166,3 +177,4 @@ cm = pd.DataFrame(cm, index=[i for i in range(25) if i != 9], columns=[i for i i
 plt.figure(figsize=(15, 15))
 sns.heatmap(cm, cmap="Blues", linecolor='black', linewidth=1, annot=True, fmt='')
 plt.show()
+
