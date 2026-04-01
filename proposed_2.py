@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import tensorflow as tf
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -13,18 +14,36 @@ from keras.callbacks import ReduceLROnPlateau
 from keras.optimizers import Nadam
 from sklearn.preprocessing import LabelBinarizer
 
+def convert(y_set):
+    letter2pos = {}
+    df_letters = pd.read_csv(r'letter_to_pose_2.csv')
+    alphabet = 'ABCDEFGHIKLMNOPQRSTUVWXY'
+    for i in range(2):
+        letter2pos[i] = df_letters[df_letters["Letter"] == alphabet[i]]
+    df = pd.concat([letter2pos[y] for y in y_set.iloc], ignore_index=True)
+    del df['Letter']
+
+    subst = {'open' : 0., 'semiclosed' : 0.5, 'closed' : 1.,
+             'flat' : 0., 'curved' : 0.5, 'bent' : 1.,
+             'FAUX' : 0., 'VRAI' : 1.}
+
+    df = df.replace(subst)
+
+    return df
+
 # Load data
 train_df = pd.read_csv(r'sign_mnist_train.csv')
 test_df = pd.read_csv(r'sign_mnist_test.csv')
 # blabla
 merged_df = pd.concat([train_df, test_df], ignore_index=True)
+merged_df = merged_df[merged_df['label'].isin([0, 1])]
 train_df, test_df = train_test_split(merged_df, test_size=0.2, random_state=42)
 # On sépare le train en deux parties (train et validation)
 train_df, val_df = train_test_split(train_df, test_size=0.1, random_state=42) 
 y = test_df['label']
-y_train = train_df['label']
-y_test = test_df['label']
-y_val = val_df['label']
+y_train = convert(train_df['label'])
+y_test = convert(test_df['label'])
+y_val = convert(val_df['label'])
 del train_df['label']
 del test_df['label']
 del val_df['label']
@@ -41,7 +60,6 @@ x_val = val_df.values / 255
 x_train = x_train.reshape(-1, 28, 28, 1)
 x_test = x_test.reshape(-1, 28, 28, 1)
 x_val = x_val.reshape(-1, 28, 28, 1)
-
 
 # Visualize some samples
 f, ax = plt.subplots(2, 5)
@@ -117,14 +135,14 @@ def build_snda(input_shape=(28, 28, 1)):
     x = Dropout(0.3)(x)
     
     # Output Layer
-    outputs = Dense(24, activation='softmax')(x)
+    outputs = Dense(15, activation='sigmoid')(x)
     
     model = Model(inputs, outputs)
     return model
 
 # Build and compile the model
 model = build_snda()
-model.compile(optimizer=Nadam(), loss='categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=Nadam(), loss='binary_crossentropy', metrics=['accuracy'])
 model.summary()
 
 # Train the model
@@ -161,7 +179,7 @@ ax[1].legend()
 ax[1].set_xlabel("Epochs")
 ax[1].set_ylabel("Loss")
 plt.show()
-
+"""
 # Generate predictions
 predictions = np.argmax(model.predict(x_test), axis=1)
 for i in range(len(predictions)):
@@ -177,4 +195,4 @@ cm = pd.DataFrame(cm, index=[i for i in range(25) if i != 9], columns=[i for i i
 plt.figure(figsize=(15, 15))
 sns.heatmap(cm, cmap="Blues", linecolor='black', linewidth=1, annot=True, fmt='')
 plt.show()
-
+"""
