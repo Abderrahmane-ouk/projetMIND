@@ -28,7 +28,6 @@ def convert(y_set):
              'FAUX' : 0., 'VRAI' : 1.}
 
     df = df.replace(subst)
-
     return df
 
 # Load data
@@ -36,14 +35,14 @@ train_df = pd.read_csv(r'sign_mnist_train.csv')
 test_df = pd.read_csv(r'sign_mnist_test.csv')
 # blabla
 merged_df = pd.concat([train_df, test_df], ignore_index=True)
-merged_df = merged_df[merged_df['label'].isin([0, 1])]
+#merged_df = merged_df[merged_df['label'].isin([0, 1])]
 train_df, test_df = train_test_split(merged_df, test_size=0.2, random_state=42)
 # On sépare le train en deux parties (train et validation)
 train_df, val_df = train_test_split(train_df, test_size=0.1, random_state=42) 
 y = test_df['label']
-y_train = convert(train_df['label'])
-y_test = convert(test_df['label'])
-y_val = convert(val_df['label'])
+y_train = train_df['label']#convert(train_df['label'])
+y_test = test_df['label']#convert(test_df['label'])
+y_val = val_df['label']#convert(val_df['label'])
 del train_df['label']
 del test_df['label']
 del val_df['label']
@@ -51,8 +50,8 @@ del val_df['label']
 # Label binarization
 label_binarizer = LabelBinarizer()
 y_train = label_binarizer.fit_transform(y_train)
-y_test = label_binarizer.fit_transform(y_test)
-y_val = label_binarizer.fit_transform(y_val)
+y_test = label_binarizer.transform(y_test)
+y_val = label_binarizer.transform(y_val)
 # Normalize and reshape data
 x_train = train_df.values / 255
 x_test = test_df.values / 255
@@ -135,14 +134,14 @@ def build_snda(input_shape=(28, 28, 1)):
     x = Dropout(0.3)(x)
     
     # Output Layer
-    outputs = Dense(15, activation='sigmoid')(x)
+    outputs = Dense(24, activation='softmax')(x)
     
     model = Model(inputs, outputs)
     return model
 
 # Build and compile the model
 model = build_snda()
-model.compile(optimizer=Nadam(), loss='binary_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=Nadam(), loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
 
 # Train the model
@@ -196,3 +195,4 @@ plt.figure(figsize=(15, 15))
 sns.heatmap(cm, cmap="Blues", linecolor='black', linewidth=1, annot=True, fmt='')
 plt.show()
 """
+
