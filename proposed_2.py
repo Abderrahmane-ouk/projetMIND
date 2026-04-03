@@ -16,18 +16,23 @@ from sklearn.preprocessing import LabelBinarizer
 
 def convert(y_set):
     letter2pos = {}
-    df_letters = pd.read_csv(r'letter_to_pose_2.csv')
+    df_letters = pd.read_csv(r'letter_to_pose.csv')
     alphabet = 'ABCDEFGHIKLMNOPQRSTUVWXY'
-    for i in range(2):
+    for i in range(24):
         letter2pos[i] = df_letters[df_letters["Letter"] == alphabet[i]]
+
     df = pd.concat([letter2pos[y] for y in y_set.iloc], ignore_index=True)
     del df['Letter']
 
     subst = {'open' : 0., 'semiclosed' : 0.5, 'closed' : 1.,
              'flat' : 0., 'curved' : 0.5, 'bent' : 1.,
-             'FAUX' : 0., 'VRAI' : 1.}
+             'FALSE' : 0., 'TRUE' : 1.} #TODO: Replace by tensor
 
     df = df.replace(subst)
+    df = df.apply(pd.to_numeric, errors='coerce')  # TODO
+    df = df.fillna(0.0)                            # TODO: Enlever
+    df = df.astype(np.float32)                     # TODO: Check
+
     return df
 
 # Load data
@@ -35,23 +40,19 @@ train_df = pd.read_csv(r'sign_mnist_train.csv')
 test_df = pd.read_csv(r'sign_mnist_test.csv')
 # blabla
 merged_df = pd.concat([train_df, test_df], ignore_index=True)
+merged_df.loc[merged_df['label'] >= 9, 'label'] -= 1
 #merged_df = merged_df[merged_df['label'].isin([0, 1])]
 train_df, test_df = train_test_split(merged_df, test_size=0.2, random_state=42)
 # On sépare le train en deux parties (train et validation)
 train_df, val_df = train_test_split(train_df, test_size=0.1, random_state=42) 
 y = test_df['label']
-y_train = train_df['label']#convert(train_df['label'])
-y_test = test_df['label']#convert(test_df['label'])
-y_val = val_df['label']#convert(val_df['label'])
+y_train = convert(train_df['label'])
+y_test = convert(test_df['label'])
+y_val = convert(val_df['label'])
 del train_df['label']
 del test_df['label']
 del val_df['label']
 
-# Label binarization
-label_binarizer = LabelBinarizer()
-y_train = label_binarizer.fit_transform(y_train)
-y_test = label_binarizer.transform(y_test)
-y_val = label_binarizer.transform(y_val)
 # Normalize and reshape data
 x_train = train_df.values / 255
 x_test = test_df.values / 255
@@ -134,14 +135,14 @@ def build_snda(input_shape=(28, 28, 1)):
     x = Dropout(0.3)(x)
     
     # Output Layer
-    outputs = Dense(24, activation='softmax')(x)
+    outputs = Dense(y_train.shape[1], activation='linear')(x)
     
     model = Model(inputs, outputs)
     return model
 
 # Build and compile the model
 model = build_snda()
-model.compile(optimizer=Nadam(), loss='categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=Nadam(), loss='mse', metrics=['mae'])
 model.summary()
 
 # Train the model
@@ -151,34 +152,34 @@ history = model.fit(datagen.flow(x_train, y_train, batch_size=128),
                     callbacks=[learning_rate_reduction])
 
 # Evaluate the model
-print("Accuracy of the model is - ", model.evaluate(x_test, y_test)[1] * 100, "%")
+print("MAE of the model is - ", model.evaluate(x_test, y_test)[1] * 100, "%")
 
 
 
 # Plot training and validation accuracy and loss
 epochs = [i for i in range(20)]
 fig, ax = plt.subplots(1, 2)
-train_acc = history.history['accuracy']
-train_loss = history.history['loss']
-val_acc = history.history['val_accuracy']
-val_loss = history.history['val_loss']
+train_acc = history.history['mae']
+train_loss = history.history['mse']
+val_acc = history.history['val_mae']
+val_loss = history.history['val_mse']
 fig.set_size_inches(16, 9)
 
-ax[0].plot(epochs, train_acc, 'go-', label='Training Accuracy')
-ax[0].plot(epochs, val_acc, 'ro-', label='Validation Accuracy')
-ax[0].set_title('Training & Validation Accuracy')
+ax[0].plot(epochs, train_acc, 'go-', label='Training MAE')
+ax[0].plot(epochs, val_acc, 'ro-', label='Validation MAE')
+ax[0].set_title('Training & Validation MAE')
 ax[0].legend()
 ax[0].set_xlabel("Epochs")
-ax[0].set_ylabel("Accuracy")
+ax[0].set_ylabel("MAE")
 
-ax[1].plot(epochs, train_loss, 'g-o', label='Training Loss')
-ax[1].plot(epochs, val_loss, 'r-o', label='Validation Loss')
-ax[1].set_title('Training & Validation Loss')
+ax[1].plot(epochs, train_loss, 'g-o', label='Training MSE')
+ax[1].plot(epochs, val_loss, 'r-o', label='Validation MSE')
+ax[1].set_title('Training & Validation MSE')
 ax[1].legend()
 ax[1].set_xlabel("Epochs")
 ax[1].set_ylabel("Loss")
 plt.show()
-"""
+""" # TODO
 # Generate predictions
 predictions = np.argmax(model.predict(x_test), axis=1)
 for i in range(len(predictions)):
