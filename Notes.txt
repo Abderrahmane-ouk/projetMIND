@@ -116,3 +116,8 @@ Corriger les bugs en remplaçant la loss par MSE et en utilisant une activation 
 Prochain objectif : Faire en sorte que, avec la caméra, on ait une fenêtre qui affiche en temps réel une main squelettique qui représente en temps réel le résultat de notre CNN et de MediaPipe, avec aussi les symboles typannot.
 
 
+April 9 
+¨¨¨¨¨¨¨
+
+https://archive.mpi.nl/tla/elan
+
