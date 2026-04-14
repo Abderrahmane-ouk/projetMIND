@@ -1,10 +1,8 @@
 import matplotlib.pyplot as plt
-import tensorflow as tf
 import seaborn as sns
 import pandas as pd
 import numpy as np
 import keras
-import os
 from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPool2D, Dense, Dropout, BatchNormalization, Flatten, GlobalAveragePooling2D, Multiply, Reshape
 from keras.layers import concatenate, Activation
@@ -15,45 +13,27 @@ from keras.callbacks import ReduceLROnPlateau
 from keras.optimizers import Nadam
 from sklearn.preprocessing import LabelBinarizer
 
-def convert(y_set):
-    letter2pos = {}
-    df_letters = pd.read_csv(r'letter_to_pose.csv')
-    alphabet = 'ABCDEFGHIKLMNOPQRSTUVWXY'
-    for i in range(24):
-        letter2pos[i] = df_letters[df_letters["Letter"] == alphabet[i]]
-
-    df = pd.concat([letter2pos[y] for y in y_set.iloc], ignore_index=True)
-    del df['Letter']
-
-    subst = {'open' : 0., 'semiclosed' : 0.5, 'closed' : 1.,
-             'flat' : 0., 'curved' : 0.5, 'bent' : 1.,
-             'FALSE' : 0., 'TRUE' : 1.}
-
-    df = df.replace(subst)
-    df = df.apply(pd.to_numeric, errors='coerce')
-    df = df.fillna(0.0)
-    df = df.astype(np.float32)
-
-    return df
-
 # Load data
 train_df = pd.read_csv(r'sign_mnist_train.csv')
 test_df = pd.read_csv(r'sign_mnist_test.csv')
 # blabla
 merged_df = pd.concat([train_df, test_df], ignore_index=True)
-merged_df.loc[merged_df['label'] >= 9, 'label'] -= 1
-#merged_df = merged_df[merged_df['label'].isin([0, 1])]
 train_df, test_df = train_test_split(merged_df, test_size=0.2, random_state=42)
 # On sépare le train en deux parties (train et validation)
 train_df, val_df = train_test_split(train_df, test_size=0.1, random_state=42) 
 y = test_df['label']
-y_train = convert(train_df['label'])
-y_test = convert(test_df['label'])
-y_val = convert(val_df['label'])
+y_train = train_df['label']
+y_test = test_df['label']
+y_val = val_df['label']
 del train_df['label']
 del test_df['label']
 del val_df['label']
 
+# Label binarization
+label_binarizer = LabelBinarizer()
+y_train = label_binarizer.fit_transform(y_train)
+y_test = label_binarizer.transform(y_test)
+y_val = label_binarizer.transform(y_val)
 # Normalize and reshape data
 x_train = train_df.values / 255
 x_test = test_df.values / 255
@@ -61,6 +41,7 @@ x_val = val_df.values / 255
 x_train = x_train.reshape(-1, 28, 28, 1)
 x_test = x_test.reshape(-1, 28, 28, 1)
 x_val = x_val.reshape(-1, 28, 28, 1)
+
 
 # Visualize some samples
 f, ax = plt.subplots(2, 5)
@@ -136,54 +117,64 @@ def build_snda(input_shape=(28, 28, 1)):
     x = Dropout(0.3)(x)
     
     # Output Layer
-    outputs = Dense(y_train.shape[1], activation='linear')(x)
+    outputs = Dense(24, activation='softmax')(x)
     
     model = Model(inputs, outputs)
     return model
 
-# Si le modèle a été entraîné, on l'importe:
-if os.path.isfile('model.keras'):
-    model = keras.models.load_model('model.keras')
-else:
-    # Build and compile the model
-    model = build_snda()
-    model.compile(optimizer=Nadam(), loss='mse', metrics=['mae'])
-    model.summary()
+# Build and compile the model
+model = build_snda()
+model.compile(optimizer=Nadam(), loss='categorical_crossentropy', metrics=['accuracy'])
+model.summary()
 
-    # Train the model
-    history = model.fit(datagen.flow(x_train, y_train, batch_size=128),
-                        epochs=20,
-                        validation_data=(x_val, y_val),
-                        callbacks=[learning_rate_reduction])
-
-    # Plot training and validation accuracy and loss
-    epochs = [i for i in range(20)]
-    fig, ax = plt.subplots(1, 2)
-    train_acc = history.history['mae']
-    train_loss = history.history['loss']
-    val_acc = history.history['val_mae']
-    val_loss = history.history['val_loss']
-    fig.set_size_inches(16, 9)
-
-    ax[0].plot(epochs, train_acc, 'go-', label='Training MAE')
-    ax[0].plot(epochs, val_acc, 'ro-', label='Validation MAE')
-    ax[0].set_title('Training & Validation MAE')
-    ax[0].legend()
-    ax[0].set_xlabel("Epochs")
-    ax[0].set_ylabel("MAE")
-
-    ax[1].plot(epochs, train_loss, 'g-o', label='Training MSE')
-    ax[1].plot(epochs, val_loss, 'r-o', label='Validation MSE')
-    ax[1].set_title('Training & Validation MSE')
-    ax[1].legend()
-    ax[1].set_xlabel("Epochs")
-    ax[1].set_ylabel("Loss")
-    plt.show()
-
-    model.save('model.keras')
+# Train the model
+history = model.fit(datagen.flow(x_train, y_train, batch_size=128),
+                    epochs=20,
+                    validation_data=(x_val, y_val),
+                    callbacks=[learning_rate_reduction])
 
 # Evaluate the model
-print("MAE of the model is - ", model.evaluate(x_test, y_test)[1])
+print("Accuracy of the model is - ", model.evaluate(x_test, y_test)[1] * 100, "%")
 
 
+
+# Plot training and validation accuracy and loss
+epochs = [i for i in range(20)]
+fig, ax = plt.subplots(1, 2)
+train_acc = history.history['accuracy']
+train_loss = history.history['loss']
+val_acc = history.history['val_accuracy']
+val_loss = history.history['val_loss']
+fig.set_size_inches(16, 9)
+
+ax[0].plot(epochs, train_acc, 'go-', label='Training Accuracy')
+ax[0].plot(epochs, val_acc, 'ro-', label='Validation Accuracy')
+ax[0].set_title('Training & Validation Accuracy')
+ax[0].legend()
+ax[0].set_xlabel("Epochs")
+ax[0].set_ylabel("Accuracy")
+
+ax[1].plot(epochs, train_loss, 'g-o', label='Training Loss')
+ax[1].plot(epochs, val_loss, 'r-o', label='Validation Loss')
+ax[1].set_title('Training & Validation Loss')
+ax[1].legend()
+ax[1].set_xlabel("Epochs")
+ax[1].set_ylabel("Loss")
+plt.show()
+
+# Generate predictions
+predictions = np.argmax(model.predict(x_test), axis=1)
+for i in range(len(predictions)):
+    if predictions[i] >= 9:
+        predictions[i] += 1
+
+# Classification report and confusion matrix
+classes = ["Class " + str(i) for i in range(25) if i != 9]
+print(classification_report(y, predictions, target_names=classes))
+
+cm = confusion_matrix(y, predictions)
+cm = pd.DataFrame(cm, index=[i for i in range(25) if i != 9], columns=[i for i in range(25) if i != 9])
+plt.figure(figsize=(15, 15))
+sns.heatmap(cm, cmap="Blues", linecolor='black', linewidth=1, annot=True, fmt='')
+plt.show()
 
