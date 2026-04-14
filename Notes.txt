@@ -123,3 +123,7 @@ April 9
 
 https://archive.mpi.nl/tla/elan
 
+April 14
+¨¨¨¨¨¨¨¨
+
+Mettre requirements.txt, sauvegarder automatiquement le modèle après l'entraînement, cropper la caméra autour de la main et mettre en noir et blanc.

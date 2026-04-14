@@ -237,6 +237,30 @@ def from_camera_normalized():
     capture.release()
     cv2.destroyAllWindows()
 
+def from_camera_mnist():
+    base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
+    options = vision.HandLandmarkerOptions(base_options=base_options, num_hands=2)
+    detector = vision.HandLandmarker.create_from_options(options)
+    capture = cv2.VideoCapture(0)
+    while capture.isOpened():
+        _, img = capture.read()
+        img = cv2.flip(img, 1)
+        rgb = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        res = detector.detect(rgb)
+        h, w, _ = img.shape
+        hands = np.array([[[point.x*w, point.y*h, point.z*np.mean([w, h])] for point in hand] for hand in res.hand_landmarks])
+        if len(hands):
+            min_x = max(0, int(np.min(hands[:, :, 0])) - 30)
+            min_y = max(0, int(np.min(hands[:, :, 1])) - 30)
+            max_x = max(0, int(np.max(hands[:, :, 0])) + 30)
+            max_y = max(0, int(np.max(hands[:, :, 1])) + 70)
+            print(min_x, min_y, max_x, max_y)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[min_y:max_y, min_x:max_x]
+        cv2.imshow('Result', img)
+        cv2.waitKey(1)
+    
+    capture.release()
+    cv2.destroyAllWindows()
 
 # Takes three points and returns the angle
 def angle(a, b, c):
@@ -289,100 +313,6 @@ def from_camera_with_3D():
     cv2.destroyAllWindows()
 
 
-from torch.utils.data import DataLoader, TensorDataset
-import torch
-import torch.nn.functional as F
-from torch import nn
-import torch.optim as optim
-
-
-train, test = torch.tensor(pd.read_csv('sign_mnist_train.csv').values), torch.tensor(pd.read_csv('sign_mnist_test.csv').values)
-x_train, y_train = train[:, 1:]/255, train[:, 0]
-x_test, y_test = test[:, 1:]/255, test[:, 0]
-x_train = x_train.view(-1, 1, 28, 28)
-x_test = x_test.view(-1, 1, 28, 28)
-y_train[y_train > 9] -= 1
-y_test[y_test > 9] -= 1
-#y_train = np.array([[int(i==y) for i in range(24)] for y in y_train])
-#y_test = np.array([[int(i==y) for i in range(24)] for y in y_test])
-train_dataset = TensorDataset(x_train, y_train)
-test_dataset = TensorDataset(x_test, y_test)
-batch_size = 32
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
-
-
-class CNN(nn.Module):
-    def __init__(self, size_hidden_layer=200):
-        super().__init__()
-        self.conv_layers = [nn.Conv2d(1, 5, 3), nn.Conv2d(5, 10, 3), nn.Conv2d(10, 20, 3)] # in_channels, out_channels, kernel_size (stride=1, padding=0)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(20, size_hidden_layer)
-        self.fc2 = nn.Linear(size_hidden_layer, 24)
-
-    def forward(self, x):
-        for i in range(len(self.conv_layers)):
-            test = self.conv_layers[i](x)
-            x = self.pool(F.relu(self.conv_layers[i](x)))
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        return self.fc2(x)
-
-cnn = CNN()
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(cnn.parameters(), lr=0.001)
-
-losses_train, accuracies_train, losses_test, accuracies_test = [], [], [], []
-for epoch in range(10):
-    print(f"{epoch=}")
-    loss_train, accuracy_train = 0, 0
-    for batch_train_x, batch_train_y in train_dataloader:
-        # Train
-        cnn.train()
-        optimizer.zero_grad()
-        # Calcul de la loss
-        outputs = cnn(batch_train_x)
-        loss = criterion(outputs, batch_train_y)
-        loss_train += loss.item()
-        # Calcul de l'accuracy
-        _, predicted = torch.max(outputs, 1)
-        real = batch_train_y
-        accuracy_train += (predicted == real).sum().item()
-        # Descente de gradient
-        loss.backward()
-        optimizer.step()
-    accuracies_train.append(accuracy_train/len(x_train))
-    losses_train.append(loss_train/len(x_train))
-
-    loss_test, accuracy_test = 0, 0
-    for batch_test_x, batch_test_y in test_dataloader:
-        # Test
-        cnn.eval()
-        outputs = cnn(batch_test_x)
-        # Calcul de la loss
-        loss = criterion(outputs, batch_test_y)
-        loss_test += loss.item()
-        # Calcul de l'accuracy
-        _, predicted = torch.max(outputs, 1)
-        real = batch_test_y
-        accuracy_test += (predicted == real).sum().item()
-    accuracies_test.append(accuracy_test/len(x_test))
-    losses_test.append(loss_test/len(x_test))
-
-plt.plot(range(1, len(losses_train)+1), losses_train, label="train")
-plt.plot(range(1, len(losses_test)+1), losses_test, label="test")
-plt.xlabel('Epoch')
-plt.ylabel('Cross Entropy')
-plt.legend()
-plt.show()
-
-plt.plot(range(1, len(accuracies_train)+1), accuracies_train, label="train")
-plt.plot(range(1, len(accuracies_test)+1), accuracies_test, label="test")
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend()
-plt.show()
-
 
 #for x in x_train[:10]:
 #    from_matrix(x)
@@ -390,6 +320,7 @@ plt.show()
 
 #from_image("image.png")
 #from_camera()
+from_camera_mnist()
 #from_camera_normalized()
 #from_camera_with_3D()
 
