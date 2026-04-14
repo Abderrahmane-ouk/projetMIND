@@ -89,6 +89,8 @@ cd /Vrac
 uv venv groupe28
 source groupe28/bin/activate
 uv pip install … --no-cache
+cd ~/Bureau/projetMIND
+uv pip freeze > requirements.txt
 /users/nfs/Vrac/groupe28/bin/python proposed_2.py
 
 
