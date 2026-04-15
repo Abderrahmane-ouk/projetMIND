@@ -23,6 +23,7 @@ from mediapipe.tasks.python import vision
 import matplotlib.pyplot as plt
 import pandas as pd
 import copy
+import keras
 
 
 
@@ -237,7 +238,16 @@ def from_camera_normalized():
     capture.release()
     cv2.destroyAllWindows()
 
+def bound(x, mini, maxi):
+    return min(max(x, mini), maxi)
+
+def mean(x, y):
+    return (x + y)//2
+
 def from_camera_mnist():
+    # On importe le modèle
+    model = keras.models.load_model('model.keras')
+
     base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
     options = vision.HandLandmarkerOptions(base_options=base_options, num_hands=2)
     detector = vision.HandLandmarker.create_from_options(options)
@@ -250,12 +260,24 @@ def from_camera_mnist():
         h, w, _ = img.shape
         hands = np.array([[[point.x*w, point.y*h, point.z*np.mean([w, h])] for point in hand] for hand in res.hand_landmarks])
         if len(hands):
+            #On récupère les abscisses et ordonnées min et max de la main
             min_x = max(0, int(np.min(hands[:, :, 0])) - 30)
-            min_y = max(0, int(np.min(hands[:, :, 1])) - 30)
             max_x = max(0, int(np.max(hands[:, :, 0])) + 30)
+            min_y = max(0, int(np.min(hands[:, :, 1])) - 30)
             max_y = max(0, int(np.max(hands[:, :, 1])) + 70)
-            print(min_x, min_y, max_x, max_y)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[min_y:max_y, min_x:max_x]
+            # On calcule la taille que devrait avoir le carré entourant la main
+            side = max(max_x - min_x, max_y - min_y)
+            # On calcule le centre de la main, et on le décale des bords si nécessaire
+            center_x, center_y = mean(min_x, max_x), mean(min_y, max_y)
+            center_x, center_y = bound(center_x, side//2, w - side//2), bound(center_y, side//2, h - side//2)
+            # On crop l'image
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[(center_y - side//2):(center_y + side//2), (center_x - side//2):(center_x + side//2)]
+            # On réduit l'image à une image de 28 * 28 pixels
+            mnist_img = np.reshape(cv2.resize(img, (28, 28)), (28, 28, 1))
+            # On évalue le modèle sur l'image
+            output = model(mnist_img)
+            output = np.round(output, 3)
+            print(output)
         cv2.imshow('Result', img)
         cv2.waitKey(1)
     
