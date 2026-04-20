@@ -147,8 +147,6 @@ if os.path.isfile('model.keras'):
 else:
     # Build and compile the model
     model = build_snda()
-    output = model(x_test[0])
-    print("test"output)
     model.compile(optimizer=Nadam(), loss='mse', metrics=['mae'])
     model.summary()
 

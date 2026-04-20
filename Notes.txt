@@ -127,3 +127,14 @@ April 14
 ¨¨¨¨¨¨¨¨
 
 Mettre requirements.txt, sauvegarder automatiquement le modèle après l'entraînement, cropper la caméra autour de la main et mettre en noir et blanc.
+
+April 15
+¨¨¨¨¨¨¨¨
+
+Réduire la taille de l'image et exécuter le modèle sur les images
+
+April 20
+¨¨¨¨¨¨¨¨
+
+Convertir la distribution donnée par le modèle en langage naturel. Commencer à créer une interface graphique en utilisant Tkinter.
+

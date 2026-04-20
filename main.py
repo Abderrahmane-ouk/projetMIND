@@ -244,8 +244,44 @@ def bound(x, mini, maxi):
 def mean(x, y):
     return (x + y)//2
 
+def if_float(x, n, *args):
+    for i in range(n-1, 0, -1):
+        if x > i/n:
+            return args[i]
+    return args[0]
+
+def prediction_to_symbol(prediction):
+    print('test', prediction.shape)
+    symbol = []
+    # Pinky
+    symbol.append('pinky')
+    symbol.append(if_float(prediction[0], 3, 'flat', 'curved', 'bent'))
+    symbol.append(if_float(prediction[1], 3, 'open', 'semiclosed', 'closed'))
+    # Ring finger
+    symbol.append('ring finger')
+    symbol.append(if_float(prediction[2], 3, 'flat', 'curved', 'bent'))
+    symbol.append(if_float(prediction[3], 3, 'open', 'semiclosed', 'closed'))
+    # Middle finger
+    symbol.append('middle finger')
+    symbol.append(if_float(prediction[4], 3, 'flat', 'curved', 'bent'))
+    symbol.append(if_float(prediction[5], 3, 'open', 'semiclosed', 'closed'))
+    # Index finger
+    symbol.append('index finger')
+    symbol.append(if_float(prediction[6], 3, 'flat', 'curved', 'bent'))
+    symbol.append(if_float(prediction[7], 3, 'open', 'semiclosed', 'closed'))
+    # Thumb
+    symbol.append('thumb')
+    symbol.append(if_float(prediction[8], 3, 'flat', 'curved', 'bent'))
+    symbol.append(if_float(prediction[9], 3, 'open', 'semiclosed', 'closed'))
+    symbol.append(if_float(prediction[10], 2, 'not opposed', 'opposed'))
+    symbol.append(if_float(prediction[11], 2, 'does not touch pinky', 'touches pinky'))
+    symbol.append(if_float(prediction[12], 2, 'does not touch ring finger', 'touches ring finger'))
+    symbol.append(if_float(prediction[13], 2, 'does not touch middle finger', 'touches middle finger'))
+    symbol.append(if_float(prediction[14], 2, 'does not touch index finger', 'touches index finger'))
+    return symbol
+
 def from_camera_mnist():
-    # On importe le modèle
+    # We import the model
     model = keras.models.load_model('model.keras')
 
     base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
@@ -260,26 +296,28 @@ def from_camera_mnist():
         h, w, _ = img.shape
         hands = np.array([[[point.x*w, point.y*h, point.z*np.mean([w, h])] for point in hand] for hand in res.hand_landmarks])
         if len(hands):
-            #On récupère les abscisses et ordonnées min et max de la main
+            # We get the x and y min and max.
             min_x = max(0, int(np.min(hands[:, :, 0])) - 30)
             max_x = max(0, int(np.max(hands[:, :, 0])) + 30)
             min_y = max(0, int(np.min(hands[:, :, 1])) - 30)
             max_y = max(0, int(np.max(hands[:, :, 1])) + 70)
-            # On calcule la taille que devrait avoir le carré entourant la main
+            # We compute the side that should have the square around the hand
             side = max(max_x - min_x, max_y - min_y)
-            # On calcule le centre de la main, et on le décale des bords si nécessaire
+            # We compute the center of the hand, and we move it if it is too close to the border
             center_x, center_y = mean(min_x, max_x), mean(min_y, max_y)
             center_x, center_y = bound(center_x, side//2, w - side//2), bound(center_y, side//2, h - side//2)
-            # On crop l'image
+            # We crop the image
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[(center_y - side//2):(center_y + side//2), (center_x - side//2):(center_x + side//2)]
-            # On réduit l'image à une image de 28 * 28 pixels
-            mnist_img = np.reshape(cv2.resize(img, (28, 28)), (28, 28, 1))
-            # On évalue le modèle sur l'image
-            output = model(mnist_img)
+            # We reduce the image to a 28 * 28 pixel one
+            mnist_img = np.reshape(cv2.resize(img, (28, 28)), (1, 28, 28, 1))/255
+            # We apply our model to the image
+            output = model(mnist_img)[0]
             output = np.round(output, 3)
-            print(output)
-        cv2.imshow('Result', img)
-        cv2.waitKey(1)
+            # We convert our prediction to symbols
+            print(prediction_to_symbol(output))
+
+        #cv2.imshow('Result', img)
+        #cv2.waitKey(1)
     
     capture.release()
     cv2.destroyAllWindows()
@@ -333,6 +371,16 @@ def from_camera_with_3D():
         
     capture.release()
     cv2.destroyAllWindows()
+
+
+
+
+
+
+
+
+
+
 
 
 
