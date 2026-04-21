@@ -138,3 +138,9 @@ April 20
 
 Convertir la distribution donnée par le modèle en langage naturel. Commencer à créer une interface graphique en utilisant Tkinter.
 
+April 21
+¨¨¨¨¨¨¨¨
+
+Faire le bouton start recording / stop recording, puis enlever les autres boutons inutiles.
+https://www.geeksforgeeks.org/python/python-opencv-capture-video-from-camera/?limit=10
+
