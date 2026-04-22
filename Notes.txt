@@ -144,3 +144,14 @@ April 21
 Faire le bouton start recording / stop recording, puis enlever les autres boutons inutiles.
 https://www.geeksforgeeks.org/python/python-opencv-capture-video-from-camera/?limit=10
 
+Apri 22
+¨¨¨¨¨¨¨
+
+Afficher les positions de la main dans la fenêtre plutôt que dans le terminal, et les enregistrer dans un fichier output.txt.
+TODO:
+- Utiliser la police d'écriture Typannot
+- Faire en sorte de pouvoir drag and drop une vidéo.
+- Corriger le problème d'overfitting avec le modèle.
+- Faire en sorte que l'on ne copie pas le transcript à chaque frame.
+
+

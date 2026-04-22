@@ -7,10 +7,6 @@ import keras
 import cv2
 from time import time
 
-root = Tk()
-root.geometry("550x300+300+150")
-root.resizable(width=True, height=True)
-
 """Functions that are not about Tkinter"""
 
 def bound(x, mini, maxi):
@@ -26,7 +22,6 @@ def if_float(x, n, *args):
     return args[0]
 
 def prediction_to_symbol(prediction):
-    print('test', prediction.shape)
     symbol = []
     # Pinky
     symbol.append('pinky')
@@ -53,7 +48,7 @@ def prediction_to_symbol(prediction):
     symbol.append(if_float(prediction[12], 2, 'does not touch ring finger', 'touches ring finger'))
     symbol.append(if_float(prediction[13], 2, 'does not touch middle finger', 'touches middle finger'))
     symbol.append(if_float(prediction[14], 2, 'does not touch index finger', 'touches index finger'))
-    return symbol
+    return str(symbol)
 
 # Takes an image (a 3D RGB array) and returns an OpenCV MNIST image centered on the hand (and None if there is no hand)
 def img_to_mnist(img):
@@ -92,57 +87,70 @@ def use_mnist(img):
         # We apply our model to the image
         output = model(mnist_img)[0]
         # We convert our prediction to symbols
-        print(prediction_to_symbol(np.round(output, 3)))
+        symbols = prediction_to_symbol(output)
+        previous_symbols = text_label.cget('text')
+        if symbols != previous_symbols:
+            print(symbols, file=transcript_fd)
+            text_label.config(text=symbols)
 
-def recording_loop():
-    global global_img
+
+def tick():
+    """About taking a caption and saving it"""
+    # We take a caption and save it
+    _, img = capture.read()
+    out.write(img)
+    """About showing the caption on screen"""
+    # We convert it to RGB and keep an array version of it
+    array_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # We convert it into an Image
+    img = Image.fromarray(array_img)
+    # We resize the image
+    w, h = img.size
+    new_w = 500
+    new_h = int(h * (new_w/w))
+    img = img.resize((new_w, new_h), Image.LANCZOS)
+    # We convert it to an ImageTk and change the panel image
+    img = ImageTk.PhotoImage(img)
+    panel.configure(image=img)
+    panel.image = img
+    """About transcribing the model"""
+    use_mnist(array_img)
+
+def loop():
     # If the camera is open
     if capture:
-        """About recording the video"""
-        # We take a caption and save it
-        _, img = capture.read()
-        out.write(img)
-        # We convert it to RGB and keep an array version of it
-        img_array = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        # We convert it into an Image
-        img = Image.fromarray(img_array)
-        # We resize the image
-        w, h = img.size
-        new_w = 500
-        new_h = int(h * (new_w/w))
-        img = img.resize((new_w, new_h), Image.LANCZOS)
-        # We convert it to an ImageTk and change the panel image
-        img = ImageTk.PhotoImage(img)
-        panel.configure(image=img)
-        panel.image = img
-        # We repeat
-        panel.after(30, recording_loop)
-        """About transcribing the video"""
-        use_mnist(img_array)
+        panel.after(1, tick)
+        panel.after(30, loop)
 
 def switch_recording():
-    global capture, out
+    global capture, out, transcript_fd
     if capture:
-        # We stop the recording
+        # We stop the camera, the recording and the transcript file
         record_button.config(text='Start recording')
         capture.release()
         out.release()
+        transcript_fd.close()
         capture = None
     else:
-        # We start the recording
+        # We start the camera, the recording and the transcript file
         record_button.config(text='Stop recording')
         capture = cv2.VideoCapture(0)
         frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter('output.mp4', fourcc, 10.0, (frame_width, frame_height))
+        transcript_fd = open('output.txt', 'w')
         # We start the loop
-        recording_loop()
+        loop()
 
-# Global variables for the image that is on the screen, the camera and the video being recorded
-global_img = None
+root = Tk()
+root.geometry("550x300+300+150")
+root.resizable(width=True, height=True)
+
+# Global variables for the camera, the video being recorded and the transcript text file
 capture = None
 out = None
+transcript_fd = None
 
 # We import the MNIST model
 model = keras.models.load_model('model.keras')
@@ -151,9 +159,9 @@ base_options = mp.tasks.BaseOptions(model_asset_path='hand_landmarker.task')
 options = mp.tasks.vision.HandLandmarkerOptions(base_options=base_options, num_hands=2)
 detector = mp.tasks.vision.HandLandmarker.create_from_options(options)
 
-
 # We create the window
 panel = Label(root); panel.pack()
+text_label = Label(root); text_label.pack()
 record_button = Button(root, text='Start recording', command=switch_recording); record_button.pack()
 root.mainloop()
 
