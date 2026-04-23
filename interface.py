@@ -74,10 +74,6 @@ def img_to_mnist(img):
 
 """Tkinter functions"""
 
-# Returns a file name that is chosen by the user
-def openfn():
-    return filedialog.askopenfilename(title='open')
-
 # Prints the result of the model on the given image (as an array)
 def use_mnist(img):
     # We convert the image to MNIST
@@ -89,16 +85,26 @@ def use_mnist(img):
         # We convert our prediction to symbols
         symbols = prediction_to_symbol(output)
         previous_symbols = text_label.cget('text')
-        if symbols != previous_symbols:
+        if previous_symbols == '' or sum(s1 != s2 for s1, s2 in zip(eval(symbols), eval(previous_symbols))) >= 5:
             print(symbols, file=transcript_fd)
             text_label.config(text=symbols)
 
 
 def tick():
+    global capture, out, transcript_fd
     """About taking a caption and saving it"""
-    # We take a caption and save it
-    _, img = capture.read()
-    out.write(img)
+    # We take a caption
+    ret, img = capture.read()
+    # If this is the end of the video, we close the capture and transcript
+    if not ret:
+        capture.release()
+        capture = None
+        transcript_fd.close()
+        transcript_fd = None
+        return
+    # We save the caption if necessary
+    if out:
+        out.write(img)
     """About showing the caption on screen"""
     # We convert it to RGB and keep an array version of it
     array_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -117,7 +123,7 @@ def tick():
     use_mnist(array_img)
 
 def loop():
-    # If the camera is open
+    # If the camera is open, we tick and we loop
     if capture:
         panel.after(1, tick)
         panel.after(30, loop)
@@ -125,15 +131,17 @@ def loop():
 def switch_recording():
     global capture, out, transcript_fd
     if capture:
-        # We stop the camera, the recording and the transcript file
-        record_button.config(text='Start recording')
+        # We stop the loop
+        record_btn.config(text='Start recording')
         capture.release()
-        out.release()
-        transcript_fd.close()
         capture = None
+        out.release()
+        out = None
+        transcript_fd.close()
+        transcript_fd = None
     else:
         # We start the camera, the recording and the transcript file
-        record_button.config(text='Stop recording')
+        record_btn.config(text='Stop recording')
         capture = cv2.VideoCapture(0)
         frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -142,6 +150,17 @@ def switch_recording():
         transcript_fd = open('output.txt', 'w')
         # We start the loop
         loop()
+
+def import_video():
+    global capture, transcript_fd
+    filename = filedialog.askopenfilename(title='open')
+    if filename is not None:
+        capture = cv2.VideoCapture(filename)
+        transcript_fd = open('output.txt', 'w')
+        loop()
+            
+            
+
 
 root = Tk()
 root.geometry("550x300+300+150")
@@ -162,7 +181,8 @@ detector = mp.tasks.vision.HandLandmarker.create_from_options(options)
 # We create the window
 panel = Label(root); panel.pack()
 text_label = Label(root); text_label.pack()
-record_button = Button(root, text='Start recording', command=switch_recording); record_button.pack()
+record_btn = Button(root, text='Start recording', command=switch_recording); record_btn.pack()
+video_btn = Button(root, text='Import video', command=import_video); video_btn.pack()
 root.mainloop()
 
 
