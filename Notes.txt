@@ -149,12 +149,27 @@ Apri 22
 
 Afficher les positions de la main dans la fenêtre plutôt que dans le terminal, et les enregistrer dans un fichier output.txt.
 TODO:
-- Utiliser la police d'écriture Typannot
-- Corriger le problème d'overfitting avec le modèle.
 
 April 23
 ¨¨¨¨¨¨¨¨
 
 Faire en sorte de pouvoir sélectionner une vidéo et obtenir les transcripts.
 Faire en sorte que l'on ne copie pas le transcript à chaque frame.
+
+TOFU:
+- sans nvidia
+- virtuel env avec version 
+- etudier ELAN
+- Utiliser des timestamps
+- Corriger le problème d'overfitting avec le modèle.
+
+April 24
+¨¨¨¨¨¨¨¨
+
+Comprendre le nouveau typannot et commencer à utiliser la police d'écriture.
+
+April 27
+¨¨¨¨¨¨¨¨
+
+Utiliser la police d'écriture Typannot
 

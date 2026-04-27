@@ -15,40 +15,89 @@ def bound(x, mini, maxi):
 def mean(x, y):
     return (x + y)//2
 
-def if_float(x, n, *args):
+def if_float(x, *args):
+    n = len(args)
     for i in range(n-1, 0, -1):
         if x > i/n:
             return args[i]
     return args[0]
 
+# Takes a float (0 for extension and 1 for flexion) and returns a string like 'flex4'
+def get_extension_or_flexion_level(x):
+    return if_float(x, 'extension4', 'extension3', 'extension2', 'extension1', 'reference', 'flexion1', 'flexion2', 'flexion3', 'flexion4')
+
+# Takes a float (0 for abduction/open and 1 for adduction/closed) and returns a string like 'abd3'
+def get_abduction_or_adduction_level(x):
+    return if_float(x, 'abduction4', 'abduction3', 'abduction2', 'abduction1', 'reference', 'adduction1', 'adduction2', 'adduction3', 'adduction4')
+
+# Tells how much it is opposed or not
+def get_intern_or_extern_rotation_level(x):
+    return if_float(x, 'intern4', 'intern3', 'intern2', 'intern1', 'reference', 'extern1', 'extern2', 'extern3', 'extern4')
+
+def to_typannot(symbol):
+    dico = {
+        'reference': '',
+        'flexion': '',
+        'extension': '',
+        'abduction': '',
+        'adduction': '',
+        'intern': '',
+        'extern': '',
+        'phalanx1': '',
+        'phalanx2': '',
+        'thumb': '',
+        'index finger': '',
+        'middle finger': '',
+        'ring finger': '',
+        'pinky': '',
+        '1': '',
+        '2': '',
+        '3': '',
+        '4': ''
+    }
+
+    symbol = ''.join(symbol)
+
+    for key in dico:
+        symbol = symbol.replace(key, dico[key])
+    
+    return symbol
+
 def prediction_to_symbol(prediction):
     symbol = []
-    # Pinky
-    symbol.append('pinky')
-    symbol.append(if_float(prediction[0], 3, 'flat', 'curved', 'bent'))
-    symbol.append(if_float(prediction[1], 3, 'open', 'semiclosed', 'closed'))
-    # Ring finger
-    symbol.append('ring finger')
-    symbol.append(if_float(prediction[2], 3, 'flat', 'curved', 'bent'))
-    symbol.append(if_float(prediction[3], 3, 'open', 'semiclosed', 'closed'))
-    # Middle finger
-    symbol.append('middle finger')
-    symbol.append(if_float(prediction[4], 3, 'flat', 'curved', 'bent'))
-    symbol.append(if_float(prediction[5], 3, 'open', 'semiclosed', 'closed'))
-    # Index finger
-    symbol.append('index finger')
-    symbol.append(if_float(prediction[6], 3, 'flat', 'curved', 'bent'))
-    symbol.append(if_float(prediction[7], 3, 'open', 'semiclosed', 'closed'))
-    # Thumb
+    """Thumb"""
     symbol.append('thumb')
-    symbol.append(if_float(prediction[8], 3, 'flat', 'curved', 'bent'))
-    symbol.append(if_float(prediction[9], 3, 'open', 'semiclosed', 'closed'))
-    symbol.append(if_float(prediction[10], 2, 'not opposed', 'opposed'))
-    symbol.append(if_float(prediction[11], 2, 'does not touch pinky', 'touches pinky'))
-    symbol.append(if_float(prediction[12], 2, 'does not touch ring finger', 'touches ring finger'))
-    symbol.append(if_float(prediction[13], 2, 'does not touch middle finger', 'touches middle finger'))
-    symbol.append(if_float(prediction[14], 2, 'does not touch index finger', 'touches index finger'))
-    return str(symbol)
+    symbol.append('phalanx1')
+    symbol.append(get_intern_or_extern_rotation_level(prediction[10]))
+    symbol.append(get_abduction_or_adduction_level(prediction[9]))
+    symbol.append('phalanx2')
+    symbol.append(get_extension_or_flexion_level(prediction[8]))
+    """Index finger"""
+    symbol.append('index finger')
+    symbol.append('phalanx1')
+    symbol.append(get_extension_or_flexion_level(prediction[7]))
+    symbol.append('phalanx2')
+    symbol.append(get_extension_or_flexion_level(prediction[6]))
+    """Middle finger"""
+    symbol.append('middle finger')
+    symbol.append('phalanx1')
+    symbol.append(get_extension_or_flexion_level(prediction[5]))
+    symbol.append('phalanx2')
+    symbol.append(get_extension_or_flexion_level(prediction[4]))
+    """Ring finger"""
+    symbol.append('ring finger')
+    symbol.append('phalanx1')
+    symbol.append(get_extension_or_flexion_level(prediction[3]))
+    symbol.append('phalanx2')
+    symbol.append(get_extension_or_flexion_level(prediction[2]))
+    """Pinky"""
+    symbol.append('pinky')
+    symbol.append('phalanx1')
+    symbol.append(get_extension_or_flexion_level(prediction[1]))
+    symbol.append('phalanx2')
+    symbol.append(get_extension_or_flexion_level(prediction[0]))
+    
+    return to_typannot(symbol)
 
 # Takes an image (a 3D RGB array) and returns an OpenCV MNIST image centered on the hand (and None if there is no hand)
 def img_to_mnist(img):
@@ -85,7 +134,7 @@ def use_mnist(img):
         # We convert our prediction to symbols
         symbols = prediction_to_symbol(output)
         previous_symbols = text_label.cget('text')
-        if previous_symbols == '' or sum(s1 != s2 for s1, s2 in zip(eval(symbols), eval(previous_symbols))) >= 5:
+        if previous_symbols == '' or sum(s1 != s2 for s1, s2 in zip(symbols, previous_symbols)) >= 5:
             print(symbols, file=transcript_fd)
             text_label.config(text=symbols)
 
@@ -147,7 +196,7 @@ def switch_recording():
         frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter('output.mp4', fourcc, 10.0, (frame_width, frame_height))
-        transcript_fd = open('output.txt', 'w')
+        transcript_fd = open('output.txt', 'w', encoding='utf-8')
         # We start the loop
         loop()
 
@@ -156,7 +205,7 @@ def import_video():
     filename = filedialog.askopenfilename(title='open')
     if filename is not None:
         capture = cv2.VideoCapture(filename)
-        transcript_fd = open('output.txt', 'w')
+        transcript_fd = open('output.txt', 'w', encoding='utf-8')
         loop()
             
             
@@ -180,7 +229,7 @@ detector = mp.tasks.vision.HandLandmarker.create_from_options(options)
 
 # We create the window
 panel = Label(root); panel.pack()
-text_label = Label(root); text_label.pack()
+text_label = Label(root, font=('TYPANNOT Beta Generics-Postural_Release_v3',25)); text_label.pack()
 record_btn = Button(root, text='Start recording', command=switch_recording); record_btn.pack()
 video_btn = Button(root, text='Import video', command=import_video); video_btn.pack()
 root.mainloop()
