@@ -1,5 +1,5 @@
 # python -m venv my-venv
-# my-venv/Scripts/pip install mediapipe opencv-python matplotlib pandas torch tensorflow scikit-learn seaborn
+# my-venv/Scripts/pip install mediapipe opencv-python matplotlib pandas torch tensorflow scikit-learn seaborn python-Levenshtein
 # my-venv/Scripts/python main.py
 # Download the file from https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
 
@@ -389,8 +389,8 @@ def from_camera_with_3D():
 #from_image("mnist_example.png")
 
 #from_image("image.png")
-#from_camera()
-from_camera_mnist()
+from_camera()
+#from_camera_mnist()
 #from_camera_normalized()
 #from_camera_with_3D()
 

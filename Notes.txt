@@ -173,3 +173,15 @@ April 27
 
 Utiliser la police d'écriture Typannot
 
+April 28
+¨¨¨¨¨¨¨¨
+
+Utiliser le modèle MediaPipe au lieu du modèle MNIST. Cela donne un meilleur résultat qui est plus rapide.
+Utiliser la distance de Levenshtein pour savoir si le signe actuel est réellement différent du signe précédent.
+
+
+
+
+
+
+

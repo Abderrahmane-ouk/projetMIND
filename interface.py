@@ -3,6 +3,7 @@ from PIL import ImageTk, Image
 from tkinter import filedialog
 import mediapipe as mp
 import numpy as np
+import Levenshtein
 import keras
 import cv2
 from time import time
@@ -34,7 +35,7 @@ def get_abduction_or_adduction_level(x):
 def get_intern_or_extern_rotation_level(x):
     return if_float(x, 'intern4', 'intern3', 'intern2', 'intern1', 'reference', 'extern1', 'extern2', 'extern3', 'extern4')
 
-def to_typannot(symbol):
+def to_typannot(symbols):
     dico = {
         'reference': '',
         'flexion': '',
@@ -56,48 +57,48 @@ def to_typannot(symbol):
         '4': ''
     }
 
-    symbol = ''.join(symbol)
+    symbols = ''.join(symbols)
 
     for key in dico:
-        symbol = symbol.replace(key, dico[key])
+        symbols = symbols.replace(key, dico[key])
     
-    return symbol
+    return symbols
 
-def prediction_to_symbol(prediction):
-    symbol = []
+def prediction_to_symbols(prediction):
+    symbols = []
     """Thumb"""
-    symbol.append('thumb')
-    symbol.append('phalanx1')
-    symbol.append(get_intern_or_extern_rotation_level(prediction[10]))
-    symbol.append(get_abduction_or_adduction_level(prediction[9]))
-    symbol.append('phalanx2')
-    symbol.append(get_extension_or_flexion_level(prediction[8]))
+    symbols.append('thumb')
+    symbols.append('phalanx1')
+    symbols.append(get_intern_or_extern_rotation_level(prediction[10]))
+    symbols.append(get_abduction_or_adduction_level(prediction[9]))
+    symbols.append('phalanx2')
+    symbols.append(get_extension_or_flexion_level(prediction[8]))
     """Index finger"""
-    symbol.append('index finger')
-    symbol.append('phalanx1')
-    symbol.append(get_extension_or_flexion_level(prediction[7]))
-    symbol.append('phalanx2')
-    symbol.append(get_extension_or_flexion_level(prediction[6]))
+    symbols.append('index finger')
+    symbols.append('phalanx1')
+    symbols.append(get_extension_or_flexion_level(prediction[7]))
+    symbols.append('phalanx2')
+    symbols.append(get_extension_or_flexion_level(prediction[6]))
     """Middle finger"""
-    symbol.append('middle finger')
-    symbol.append('phalanx1')
-    symbol.append(get_extension_or_flexion_level(prediction[5]))
-    symbol.append('phalanx2')
-    symbol.append(get_extension_or_flexion_level(prediction[4]))
+    symbols.append('middle finger')
+    symbols.append('phalanx1')
+    symbols.append(get_extension_or_flexion_level(prediction[5]))
+    symbols.append('phalanx2')
+    symbols.append(get_extension_or_flexion_level(prediction[4]))
     """Ring finger"""
-    symbol.append('ring finger')
-    symbol.append('phalanx1')
-    symbol.append(get_extension_or_flexion_level(prediction[3]))
-    symbol.append('phalanx2')
-    symbol.append(get_extension_or_flexion_level(prediction[2]))
+    symbols.append('ring finger')
+    symbols.append('phalanx1')
+    symbols.append(get_extension_or_flexion_level(prediction[3]))
+    symbols.append('phalanx2')
+    symbols.append(get_extension_or_flexion_level(prediction[2]))
     """Pinky"""
-    symbol.append('pinky')
-    symbol.append('phalanx1')
-    symbol.append(get_extension_or_flexion_level(prediction[1]))
-    symbol.append('phalanx2')
-    symbol.append(get_extension_or_flexion_level(prediction[0]))
+    symbols.append('pinky')
+    symbols.append('phalanx1')
+    symbols.append(get_extension_or_flexion_level(prediction[1]))
+    symbols.append('phalanx2')
+    symbols.append(get_extension_or_flexion_level(prediction[0]))
     
-    return to_typannot(symbol)
+    return to_typannot(symbols)
 
 # Takes an image (a 3D RGB array) and returns an OpenCV MNIST image centered on the hand (and None if there is no hand)
 def img_to_mnist(img):
@@ -119,25 +120,71 @@ def img_to_mnist(img):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[(center_y - side//2):(center_y + side//2), (center_x - side//2):(center_x + side//2)]
         # We reduce the image to a 28 * 28 pixel one
         return np.reshape(cv2.resize(img, (28, 28)), (1, 28, 28, 1))/255
-    
 
-"""Tkinter functions"""
-
-# Prints the result of the model on the given image (as an array)
+# Returns the result of the MNIST model on the given image (as an array)
 def use_mnist(img):
     # We convert the image to MNIST
     mnist_img = img_to_mnist(img)
-    # If a hand was detected
-    if mnist_img is not None:
-        # We apply our model to the image
-        output = model(mnist_img)[0]
-        # We convert our prediction to symbols
-        symbols = prediction_to_symbol(output)
-        previous_symbols = text_label.cget('text')
-        if previous_symbols == '' or sum(s1 != s2 for s1, s2 in zip(symbols, previous_symbols)) >= 5:
-            print(symbols, file=transcript_fd)
-            text_label.config(text=symbols)
+    # If a hand was detected, we apply a model
+    return None if mnist_img is None else model(mnist_img)[0]
 
+# Takes three points and returns the angle
+def angle(a, b, c):
+    # We compute the vectors ba and bc
+    ba, bc = a - b, c - b
+    # Remember that u · v = |u| * |v| * cos(θ)
+    # Meaning that cos(theta) = (u · v) / (|u| * |v|)
+    # Therefore, theta = arccos((u · v) / (|u| * |v|))
+    return np.degrees(np.arccos(np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))))
+
+# Returns the result of the MNIST model on the given image (as an array)
+def use_mediapipe(img):
+    rgb = mp.Image(image_format=mp.ImageFormat.SRGB, data=img)
+    res = detector.detect(rgb)
+    h, w, _ = img.shape
+    hands = np.array([[[point.x*w, point.y*h, point.z*np.mean([w, h])] for point in hand] for hand in res.hand_landmarks])
+    if len(hands) == 0:
+        return None
+    hand = hands[0]
+    # We extract the angles
+    angles = np.array([None]*11)
+    """Thumb"""
+    # Phalanx 1, Intern or extern rotation angle (10)
+    angles[10] = 0
+    # Phalanx 1, Abduction or adduction (9)
+    angles[9] = 0
+    # Phalanx 2 (8)
+    angles[8] = angle(hand[2], hand[3], hand[4])
+    """Index finger"""
+    # Phalanx 1 (7)
+    angles[7] = angle(hand[0], hand[5], hand[6])
+    # Phalanx 2 (6)
+    angles[6] = angle(hand[5], hand[6], hand[7])
+    """Middle finger"""
+    # Phalanx 1 (5)
+    angles[5] = angle(hand[0], hand[9], hand[10])
+    # Phalanx 2 (4)
+    angles[4] = angle(hand[9], hand[10], hand[11])
+    """Ring finger"""
+    # Phalanx 1 (3)
+    angles[3] = angle(hand[0], hand[13], hand[14])
+    # Phalanx 2 (2)
+    angles[2] = angle(hand[13], hand[14], hand[15])
+    """Pinky"""
+    # Phalanx 1 (1)
+    angles[1] = angle(hand[0], hand[17], hand[18])
+    # Phalanx 2 (0)
+    angles[0] = angle(hand[17], hand[18], hand[19])
+    # The angles vary between 180 (open flat) and 90 (closed bent)
+    # We reduce them to vary between 0 (open flat) and 1 (closed bent)
+    angles -= 90 # They now vary between 90 and 0
+    angles /= 90 # They now vary between 1 and 0
+    angles = 1 - angles # They now vary between 0 and 1
+
+    return [round(float(e), 2) for e in angles]
+    
+
+"""Tkinter functions"""
 
 def tick():
     global capture, out, transcript_fd
@@ -169,7 +216,17 @@ def tick():
     panel.configure(image=img)
     panel.image = img
     """About transcribing the model"""
-    use_mnist(array_img)
+    # We get an array which contains for each of our label a real number
+    #output = use_mnist(array_img)
+    output = use_mediapipe(array_img)
+    if output is not None:
+        # We convert our prediction to symbols
+        symbols = prediction_to_symbols(output)
+        # If the symbols have varied enough, we store them
+        previous_symbols = text_label.cget('text')
+        if previous_symbols == '' or Levenshtein.distance(symbols, previous_symbols) >= 5:
+            print(symbols, file=transcript_fd)
+            text_label.config(text=symbols)
 
 def loop():
     # If the camera is open, we tick and we loop
