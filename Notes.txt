@@ -156,13 +156,6 @@ April 23
 Faire en sorte de pouvoir sélectionner une vidéo et obtenir les transcripts.
 Faire en sorte que l'on ne copie pas le transcript à chaque frame.
 
-TOFU:
-- sans nvidia
-- virtuel env avec version 
-- etudier ELAN
-- Utiliser des timestamps
-- Corriger le problème d'overfitting avec le modèle.
-
 April 24
 ¨¨¨¨¨¨¨¨
 
@@ -179,8 +172,18 @@ April 28
 Utiliser le modèle MediaPipe au lieu du modèle MNIST. Cela donne un meilleur résultat qui est plus rapide.
 Utiliser la distance de Levenshtein pour savoir si le signe actuel est réellement différent du signe précédent.
 
+May 4
+¨¨¨¨¨
 
+MAY THE FOURTH BE WITH YOU!!!
 
+Corriger les problèmes d'incompatibilités dans le requirements.txt
+
+TOFU:
+- sans nvidia
+- etudier ELAN
+- Utiliser des timestamps
+- Corriger le problème d'overfitting avec le modèle. (probablement pas possible)
 
 
 
