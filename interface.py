@@ -7,6 +7,8 @@ import Levenshtein
 import keras
 import cv2
 from time import time
+import warnings
+warnings.filterwarnings('ignore')
 
 """Functions that are not about Tkinter"""
 
