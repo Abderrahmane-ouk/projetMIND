@@ -6,9 +6,11 @@ import numpy as np
 import Levenshtein
 import keras
 import cv2
-from time import time
+import time
+import os
 import warnings
 warnings.filterwarnings('ignore')
+
 
 """Functions that are not about Tkinter"""
 
@@ -189,7 +191,7 @@ def use_mediapipe(img):
 """Tkinter functions"""
 
 def tick():
-    global capture, out, transcript_fd
+    global capture, out
     """About taking a caption and saving it"""
     # We take a caption
     ret, img = capture.read()
@@ -197,8 +199,6 @@ def tick():
     if not ret:
         capture.release()
         capture = None
-        transcript_fd.close()
-        transcript_fd = None
         return
     # We save the caption if necessary
     if out:
@@ -224,20 +224,56 @@ def tick():
     if output is not None:
         # We convert our prediction to symbols
         symbols = prediction_to_symbols(output)
-        # If the symbols have varied enough, we store them
+        # If the symbols have varied enough, we store them and the current time
         previous_symbols = text_label.cget('text')
         if previous_symbols == '' or Levenshtein.distance(symbols, previous_symbols) >= 5:
-            print(symbols, file=transcript_fd)
+            transcripts.append((symbols, (time.time() - t0 if out else capture.get(cv2.CAP_PROP_POS_MSEC)/1000)))
             text_label.config(text=symbols)
-
+            
 def loop():
     # If the camera is open, we tick and we loop
     if capture:
         panel.after(1, tick)
         panel.after(30, loop)
 
+def write_transcripts():
+    # with open('output.txt', 'w', encoding='utf-8') as transcript_fd:
+    #     for symbols, timestamp in transcripts:
+    #         print(f'{time.strftime('%H:%M:%S', time.gmtime(timestamp))} : {symbols}', file=transcript_fd)
+    directory = os.path.dirname(os.path.abspath(__file__))
+    relative_video_filename = 'output.mp4'
+    absolute_video_filename = os.path.join(directory, relative_video_filename)
+    with open('output.eaf', 'w', encoding='utf-8') as fd:
+        print('<?xml version="1.0" encoding="UTF-8"?>', file=fd)
+        print('<ANNOTATION_DOCUMENT AUTHOR="" DATE=""', file=fd)
+        print('    FORMAT="3.0" VERSION="3.0"', file=fd)
+        print('    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv3.0.xsd">', file=fd)
+        print('    <HEADER MEDIA_FILE="" TIME_UNITS="milliseconds">', file=fd)
+        print(f'        <MEDIA_DESCRIPTOR MEDIA_URL="file:///{absolute_video_filename}" MIME_TYPE="video/mp4" RELATIVE_MEDIA_URL="./{relative_video_filename}"/>', file=fd)
+        print('        <PROPERTY NAME="URN">urn:nl-mpi-tools-elan-eaf:5c6d0ee9-a35f-4c58-b014-fea8f7d6a539</PROPERTY>', file=fd)
+        print('        <PROPERTY NAME="lastUsedAnnotationId">2</PROPERTY>', file=fd)
+        print('    </HEADER>', file=fd)
+        print('    <TIME_ORDER>', file=fd)
+        for i, (_, timestamp) in enumerate(transcripts):
+            print(f'        <TIME_SLOT TIME_SLOT_ID="ts{i+1}" TIME_VALUE="{int(timestamp*1000)}"/>', file=fd)
+        print('    </TIME_ORDER>', file=fd)
+        print('    <TIER LINGUISTIC_TYPE_REF="default-lt" TIER_ID="default">', file=fd)
+        for i, (symbols, timestamp) in enumerate(transcripts[:-1]):
+            print('        <ANNOTATION>', file=fd)
+            print(f'            <ALIGNABLE_ANNOTATION ANNOTATION_ID="a{i+1}" TIME_SLOT_REF1="ts{i+1}" TIME_SLOT_REF2="ts{i+2}">', file=fd)
+            print(f'                <ANNOTATION_VALUE>{symbols}</ANNOTATION_VALUE>', file=fd)
+            print('            </ALIGNABLE_ANNOTATION>', file=fd)
+            print('        </ANNOTATION>', file=fd)
+        print('    </TIER>', file=fd)
+        print('    <LINGUISTIC_TYPE GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="default-lt" TIME_ALIGNABLE="true"/>', file=fd)
+        print('    <CONSTRAINT DESCRIPTION="Time subdivision of parent annotation\'s time interval, no time gaps allowed within this interval" STEREOTYPE="Time_Subdivision"/>', file=fd)
+        print('    <CONSTRAINT DESCRIPTION="Symbolic subdivision of a parent annotation. Annotations refering to the same parent are ordered" STEREOTYPE="Symbolic_Subdivision"/>', file=fd)
+        print('    <CONSTRAINT DESCRIPTION="1-1 association with a parent annotation" STEREOTYPE="Symbolic_Association"/>', file=fd)
+        print('    <CONSTRAINT DESCRIPTION="Time alignable annotations within the parent annotation\'s time interval, gaps are allowed" STEREOTYPE="Included_In"/>', file=fd)
+        print('</ANNOTATION_DOCUMENT>', file=fd)
+
 def switch_recording():
-    global capture, out, transcript_fd
+    global capture, out, t0
     if capture:
         # We stop the loop
         record_btn.config(text='Start recording')
@@ -245,26 +281,25 @@ def switch_recording():
         capture = None
         out.release()
         out = None
-        transcript_fd.close()
-        transcript_fd = None
+        write_transcripts()
     else:
-        # We start the camera, the recording and the transcript file
+        # We start the camera and the recording
         record_btn.config(text='Stop recording')
         capture = cv2.VideoCapture(0)
         frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter('output.mp4', fourcc, 10.0, (frame_width, frame_height))
-        transcript_fd = open('output.txt', 'w', encoding='utf-8')
+        # We start the timer
+        t0 = time.time()
         # We start the loop
         loop()
 
 def import_video():
-    global capture, transcript_fd
+    global capture
     filename = filedialog.askopenfilename(title='open')
     if filename is not None:
         capture = cv2.VideoCapture(filename)
-        transcript_fd = open('output.txt', 'w', encoding='utf-8')
         loop()
             
             
@@ -274,10 +309,11 @@ root = Tk()
 root.geometry("550x300+300+150")
 root.resizable(width=True, height=True)
 
-# Global variables for the camera, the video being recorded and the transcript text file
+# Global variables for the camera, the video being recorded and the transcripts
 capture = None
 out = None
-transcript_fd = None
+t0 = None
+transcripts = [] # transcripts is a list of tuples (symbols, begin_time)
 
 # We import the MNIST model
 model = keras.models.load_model('model.keras')

@@ -182,9 +182,16 @@ Corriger les problèmes d'incompatibilités dans le requirements.txt
 TOFU:
 - sans nvidia
 - etudier ELAN
-- Utiliser des timestamps
 - Corriger le problème d'overfitting avec le modèle. (probablement pas possible)
 
+May 6
+¨¨¨¨¨
 
+Ajouter le timestamp pour la caméra et les vidéos importées.
+
+May 7
+¨¨¨¨¨
+
+Créer automatiquement le fichier ELAN lorsque l'on importe une vidéo ou que l'on fait une vidéo.
 
 
