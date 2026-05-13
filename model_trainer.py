@@ -39,12 +39,10 @@ def convert(y_set):
 # Load data
 train_df = pd.read_csv(r'sign_mnist_train.csv')
 test_df = pd.read_csv(r'sign_mnist_test.csv')
-# blabla
-merged_df = pd.concat([train_df, test_df], ignore_index=True)
-merged_df.loc[merged_df['label'] >= 9, 'label'] -= 1
-#merged_df = merged_df[merged_df['label'].isin([0, 1])]
-train_df, test_df = train_test_split(merged_df, test_size=0.2, random_state=42)
-# On sépare le train en deux parties (train et validation)
+# We subtract the labels higher than 9 by 1 because the letter 'j' is not in MNIST ASL
+train_df.loc[train_df['label'] >= 9, 'label'] -= 1
+test_df.loc[test_df['label'] >= 9, 'label'] -= 1
+# We separate the train in two parts (train and validation)
 train_df, val_df = train_test_split(train_df, test_size=0.1, random_state=42) 
 y = test_df['label']
 y_train = convert(train_df['label'])
@@ -141,7 +139,7 @@ def build_snda(input_shape=(28, 28, 1)):
     model = Model(inputs, outputs)
     return model
 
-# Si le modèle a été entraîné, on l'importe:
+# If the model already exists, we import it:
 if os.path.isfile('model.keras'):
     model = keras.models.load_model('model.keras')
 else:

@@ -16,10 +16,10 @@ from sklearn.preprocessing import LabelBinarizer
 # Load data
 train_df = pd.read_csv(r'sign_mnist_train.csv')
 test_df = pd.read_csv(r'sign_mnist_test.csv')
-# blabla
+# We split the train and test once again to verify that the authors haven't overfitted on the test
 merged_df = pd.concat([train_df, test_df], ignore_index=True)
 train_df, test_df = train_test_split(merged_df, test_size=0.2, random_state=42)
-# On sépare le train en deux parties (train et validation)
+# We separate the train in two parts (train and validation)
 train_df, val_df = train_test_split(train_df, test_size=0.1, random_state=42) 
 y = test_df['label']
 y_train = train_df['label']

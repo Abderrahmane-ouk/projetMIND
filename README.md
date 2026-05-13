@@ -47,7 +47,6 @@ Ce fichier `.eaf` peut ensuite être ouvert à l'aide d'ELAN. Pour utiliser la p
 <!--
 ## Créer le requirements.txt
 ```
-python3.12 -m venv my-venv
 my-venv/Scripts/pip install mediapipe opencv-python matplotlib pandas torch tensorflow scikit-learn seaborn python-Levenshtein
 my-venv/Scripts/pip freeze > requirements.txt
 ```
