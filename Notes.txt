@@ -195,3 +195,12 @@ May 7
 Créer automatiquement le fichier ELAN lorsque l'on importe une vidéo ou que l'on fait une vidéo.
 
 
+May 13
+¨¨¨¨¨¨
+
+Supprimer main.py
+Renommer interface.py en main.py
+Renommer proposed_2.py en model_trainer.py
+Renommer proposed_3.py en mnist_asl_trainer.py
+Modifier le README.txt
+

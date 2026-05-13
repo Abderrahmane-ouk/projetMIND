@@ -316,7 +316,7 @@ t0 = None
 transcripts = [] # transcripts is a list of tuples (symbols, begin_time)
 
 # We import the MNIST model
-model = keras.models.load_model('model.keras')
+# model = keras.models.load_model('model.keras')
 # We import the MediaPipe model
 base_options = mp.tasks.BaseOptions(model_asset_path='hand_landmarker.task')
 options = mp.tasks.vision.HandLandmarkerOptions(base_options=base_options, num_hands=2)
