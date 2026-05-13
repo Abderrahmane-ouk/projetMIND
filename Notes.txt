@@ -175,8 +175,6 @@ Utiliser la distance de Levenshtein pour savoir si le signe actuel est réelleme
 May 4
 ¨¨¨¨¨
 
-MAY THE FOURTH BE WITH YOU!!!
-
 Corriger les problèmes d'incompatibilités dans le requirements.txt
 
 TOFU:
@@ -203,4 +201,4 @@ Renommer interface.py en main.py
 Renommer proposed_2.py en model_trainer.py
 Renommer proposed_3.py en mnist_asl_trainer.py
 Modifier le README.txt
-
+Faire en sorte de pouvoir modifier simplement si l'on utilise model.keras ou mediapipe

@@ -53,6 +53,16 @@ my-venv/Scripts/pip freeze > requirements.txt
 ```
 -->
 
+## Autres fonctionnalités
+
+### Utiliser un modèle basé sur MNIST ASL
+
+Au lieu d'utiliser le modèle MediaPipe Hand Landmarker, il est aussi possible d'utiliser le modèle `model.keras`. Si vous voulez utiliser ce second modèle, modifier le fichier `main.py` à la ligne 310 pour mettre la variable `uses_mnist` à `True` au lieu de `False`.
+
+### Entraîner le modèle Keras
+
+Le modèle Keras peut être ré-obtenu à l'aide du programme `model_trainer.py`.
+
 ## Sources
 
 La base de données [MNIST ASL](https://www.kaggle.com/datasets/datamunge/sign-language-mnist).

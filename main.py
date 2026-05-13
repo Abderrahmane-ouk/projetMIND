@@ -219,8 +219,7 @@ def tick():
     panel.image = img
     """About transcribing the model"""
     # We get an array which contains for each of our label a real number
-    #output = use_mnist(array_img)
-    output = use_mediapipe(array_img)
+    output = use_mnist(array_img) if uses_mnist else use_mediapipe(array_img)
     if output is not None:
         # We convert our prediction to symbols
         symbols = prediction_to_symbols(output)
@@ -237,13 +236,10 @@ def loop():
         panel.after(30, loop)
 
 def write_transcripts():
-    # with open('output.txt', 'w', encoding='utf-8') as transcript_fd:
-    #     for symbols, timestamp in transcripts:
-    #         print(f'{time.strftime('%H:%M:%S', time.gmtime(timestamp))} : {symbols}', file=transcript_fd)
     directory = os.path.dirname(os.path.abspath(__file__))
-    relative_video_filename = 'output.mp4'
+    relative_video_filename = output_mp4_filename
     absolute_video_filename = os.path.join(directory, relative_video_filename)
-    with open('output.eaf', 'w', encoding='utf-8') as fd:
+    with open(output_eaf_filename, 'w', encoding='utf-8') as fd:
         print('<?xml version="1.0" encoding="UTF-8"?>', file=fd)
         print('<ANNOTATION_DOCUMENT AUTHOR="" DATE=""', file=fd)
         print('    FORMAT="3.0" VERSION="3.0"', file=fd)
@@ -289,7 +285,7 @@ def switch_recording():
         frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter('output.mp4', fourcc, 10.0, (frame_width, frame_height))
+        out = cv2.VideoWriter(output_mp4_filename, fourcc, 10.0, (frame_width, frame_height))
         # We start the timer
         t0 = time.time()
         # We start the loop
@@ -302,11 +298,23 @@ def import_video():
         capture = cv2.VideoCapture(filename)
         loop()
             
-            
+
+
+
+
+
+"""MODIFIABLE VARIABLES"""
+font_name = 'TYPANNOT Beta Generics-Postural_Release_v3'
+output_eaf_filename = 'output.eaf'
+output_mp4_filename = 'output.mp4'
+uses_mnist = False
+
+
+
 
 
 root = Tk()
-root.geometry("550x300+300+150")
+root.geometry("1200x800+300+150")
 root.resizable(width=True, height=True)
 
 # Global variables for the camera, the video being recorded and the transcripts
@@ -315,8 +323,9 @@ out = None
 t0 = None
 transcripts = [] # transcripts is a list of tuples (symbols, begin_time)
 
-# We import the MNIST model
-# model = keras.models.load_model('model.keras')
+# We import the MNIST model if necessary
+if uses_mnist:
+    model = keras.models.load_model('model.keras')
 # We import the MediaPipe model
 base_options = mp.tasks.BaseOptions(model_asset_path='hand_landmarker.task')
 options = mp.tasks.vision.HandLandmarkerOptions(base_options=base_options, num_hands=2)
@@ -324,7 +333,7 @@ detector = mp.tasks.vision.HandLandmarker.create_from_options(options)
 
 # We create the window
 panel = Label(root); panel.pack()
-text_label = Label(root, font=('TYPANNOT Beta Generics-Postural_Release_v3',25)); text_label.pack()
+text_label = Label(root, font=(font_name, 25)); text_label.pack()
 record_btn = Button(root, text='Start recording', command=switch_recording); record_btn.pack()
 video_btn = Button(root, text='Import video', command=import_video); video_btn.pack()
 root.mainloop()
