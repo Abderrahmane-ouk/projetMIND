@@ -199,6 +199,7 @@ def tick():
     if not ret:
         capture.release()
         capture = None
+        write_transcripts(recorded=False)
         return
     # We save the caption if necessary
     if out:
@@ -235,17 +236,18 @@ def loop():
         panel.after(1, tick)
         panel.after(30, loop)
 
-def write_transcripts():
-    directory = os.path.dirname(os.path.abspath(__file__))
-    relative_video_filename = output_mp4_filename
-    absolute_video_filename = os.path.join(directory, relative_video_filename)
-    with open(output_eaf_filename, 'w', encoding='utf-8') as fd:
+# It also wipes out the transcripts
+def write_transcripts(recorded):
+    global transcripts
+    video_filename = 'output.mp4' if recorded else input_video_filename
+    # We create a .eaf file called output.eaf
+    with open('output.eaf', 'w', encoding='utf-8') as fd:
         print('<?xml version="1.0" encoding="UTF-8"?>', file=fd)
         print('<ANNOTATION_DOCUMENT AUTHOR="" DATE=""', file=fd)
         print('    FORMAT="3.0" VERSION="3.0"', file=fd)
         print('    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv3.0.xsd">', file=fd)
         print('    <HEADER MEDIA_FILE="" TIME_UNITS="milliseconds">', file=fd)
-        print(f'        <MEDIA_DESCRIPTOR MEDIA_URL="file:///{absolute_video_filename}" MIME_TYPE="video/mp4" RELATIVE_MEDIA_URL="./{relative_video_filename}"/>', file=fd)
+        print(f'        <MEDIA_DESCRIPTOR MEDIA_URL="{video_filename}" MIME_TYPE="video/mp4"/>', file=fd)
         print('        <PROPERTY NAME="URN">urn:nl-mpi-tools-elan-eaf:5c6d0ee9-a35f-4c58-b014-fea8f7d6a539</PROPERTY>', file=fd)
         print('        <PROPERTY NAME="lastUsedAnnotationId">2</PROPERTY>', file=fd)
         print('    </HEADER>', file=fd)
@@ -267,6 +269,7 @@ def write_transcripts():
         print('    <CONSTRAINT DESCRIPTION="1-1 association with a parent annotation" STEREOTYPE="Symbolic_Association"/>', file=fd)
         print('    <CONSTRAINT DESCRIPTION="Time alignable annotations within the parent annotation\'s time interval, gaps are allowed" STEREOTYPE="Included_In"/>', file=fd)
         print('</ANNOTATION_DOCUMENT>', file=fd)
+    transcripts = []
 
 def switch_recording():
     global capture, out, t0
@@ -277,7 +280,7 @@ def switch_recording():
         capture = None
         out.release()
         out = None
-        write_transcripts()
+        write_transcripts(recorded=True) # recorded=False tells that the video was just recorded
     else:
         # We start the camera and the recording
         record_btn.config(text='Stop recording')
@@ -285,17 +288,17 @@ def switch_recording():
         frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(output_mp4_filename, fourcc, 10.0, (frame_width, frame_height))
+        out = cv2.VideoWriter('output.mp4', fourcc, 10.0, (frame_width, frame_height))
         # We start the timer
         t0 = time.time()
         # We start the loop
         loop()
 
 def import_video():
-    global capture
-    filename = filedialog.askopenfilename(title='open')
-    if filename is not None:
-        capture = cv2.VideoCapture(filename)
+    global capture, input_video_filename
+    input_video_filename = filedialog.askopenfilename(title='open')
+    if input_video_filename is not None:
+        capture = cv2.VideoCapture(input_video_filename)
         loop()
             
 
@@ -305,8 +308,6 @@ def import_video():
 
 """MODIFIABLE VARIABLES"""
 font_name = 'TYPANNOT Beta Generics-Postural_Release_v3'
-output_eaf_filename = 'output.eaf'
-output_mp4_filename = 'output.mp4'
 uses_mnist = False
 
 
@@ -319,7 +320,8 @@ root.resizable(width=True, height=True)
 
 # Global variables for the camera, the video being recorded and the transcripts
 capture = None
-out = None
+input_video_filename = None
+out = None # Object representing the video being recorded
 t0 = None
 transcripts = [] # transcripts is a list of tuples (symbols, begin_time)
 
