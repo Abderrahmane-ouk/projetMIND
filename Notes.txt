@@ -202,3 +202,14 @@ Renommer proposed_2.py en model_trainer.py
 Renommer proposed_3.py en mnist_asl_trainer.py
 Modifier le README.txt
 Faire en sorte de pouvoir modifier simplement si l'on utilise model.keras ou mediapipe
+
+May 16
+¨¨¨¨¨¨
+
+Commencer les diapos
+
+May 18
+¨¨¨¨¨¨
+
+Finir les diapos, continuer le rapport, ajouter la courbe de test.
+

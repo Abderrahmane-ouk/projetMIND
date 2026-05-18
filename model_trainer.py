@@ -139,6 +139,18 @@ def build_snda(input_shape=(28, 28, 1)):
     model = Model(inputs, outputs)
     return model
 
+
+class TestMetricsCallback(tf.keras.callbacks.Callback):
+    def __init__(self):
+        super().__init__()
+
+    # Function that is called at each epoch end to store the test loss and MAE
+    def on_epoch_end(self, epoch, logs=None):
+        loss, mae = self.model.evaluate(x_test, y_test, verbose=0)
+        test_loss.append(loss)
+        test_mae.append(mae)
+
+
 # If the model already exists, we import it:
 if os.path.isfile('model.keras'):
     model = keras.models.load_model('model.keras')
@@ -148,11 +160,17 @@ else:
     model.compile(optimizer=Nadam(), loss='mse', metrics=['mae'])
     model.summary()
 
+    # Create variable to store test loss and test MAE
+    test_loss, test_mae = [], []
+
+    # Create a Callable class
+    test_callback = TestMetricsCallback()
+
     # Train the model
     history = model.fit(datagen.flow(x_train, y_train, batch_size=128),
                         epochs=20,
                         validation_data=(x_val, y_val),
-                        callbacks=[learning_rate_reduction])
+                        callbacks=[learning_rate_reduction, test_callback])
 
     # Plot training and validation accuracy and loss
     epochs = [i for i in range(20)]
@@ -165,14 +183,16 @@ else:
 
     ax[0].plot(epochs, train_acc, 'go-', label='Training MAE')
     ax[0].plot(epochs, val_acc, 'ro-', label='Validation MAE')
-    ax[0].set_title('Training & Validation MAE')
+    ax[0].plot(epochs, test_mae, 'bo-', label='Test MAE')
+    ax[0].set_title('MAE')
     ax[0].legend()
     ax[0].set_xlabel("Epochs")
     ax[0].set_ylabel("MAE")
 
     ax[1].plot(epochs, train_loss, 'g-o', label='Training MSE')
     ax[1].plot(epochs, val_loss, 'r-o', label='Validation MSE')
-    ax[1].set_title('Training & Validation MSE')
+    ax[1].plot(epochs, test_loss, 'b-o', label='Test MSE')
+    ax[1].set_title('MSE')
     ax[1].legend()
     ax[1].set_xlabel("Epochs")
     ax[1].set_ylabel("Loss")

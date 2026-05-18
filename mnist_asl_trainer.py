@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import tensorflow as tf
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -122,16 +123,33 @@ def build_snda(input_shape=(28, 28, 1)):
     model = Model(inputs, outputs)
     return model
 
+class TestMetricsCallback(tf.keras.callbacks.Callback):
+    def __init__(self):
+        super().__init__()
+
+    # Function that is called at each epoch end to store the test loss and MAE
+    def on_epoch_end(self, epoch, logs=None):
+        loss, acc = self.model.evaluate(x_test, y_test, verbose=0)
+        test_loss.append(loss)
+        test_acc.append(acc)
+
+
 # Build and compile the model
 model = build_snda()
 model.compile(optimizer=Nadam(), loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
 
+# Create variable to store test loss and test MAE
+test_loss, test_acc = [], []
+
+# Create a Callable class
+test_callback = TestMetricsCallback()
+
 # Train the model
 history = model.fit(datagen.flow(x_train, y_train, batch_size=128),
                     epochs=20,
                     validation_data=(x_val, y_val),
-                    callbacks=[learning_rate_reduction])
+                    callbacks=[learning_rate_reduction, test_callback])
 
 # Evaluate the model
 print("Accuracy of the model is - ", model.evaluate(x_test, y_test)[1] * 100, "%")
@@ -149,14 +167,16 @@ fig.set_size_inches(16, 9)
 
 ax[0].plot(epochs, train_acc, 'go-', label='Training Accuracy')
 ax[0].plot(epochs, val_acc, 'ro-', label='Validation Accuracy')
-ax[0].set_title('Training & Validation Accuracy')
+ax[0].plot(epochs, test_acc, 'bo-', label='Test Accuracy')
+ax[0].set_title('Accuracy')
 ax[0].legend()
 ax[0].set_xlabel("Epochs")
 ax[0].set_ylabel("Accuracy")
 
 ax[1].plot(epochs, train_loss, 'g-o', label='Training Loss')
 ax[1].plot(epochs, val_loss, 'r-o', label='Validation Loss')
-ax[1].set_title('Training & Validation Loss')
+ax[1].plot(epochs, test_loss, 'b-o', label='Test Loss')
+ax[1].set_title('Loss')
 ax[1].legend()
 ax[1].set_xlabel("Epochs")
 ax[1].set_ylabel("Loss")
